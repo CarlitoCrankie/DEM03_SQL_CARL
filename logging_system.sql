@@ -204,24 +204,17 @@ proc: BEGIN
     DECLARE v_EndTime TIMESTAMP;
     DECLARE v_ExecutionTimeMs INT;
     DECLARE v_ProductName VARCHAR(150);
+    DECLARE v_ErrorCode VARCHAR(10);
+    DECLARE v_ErrorMessage TEXT;
     
-    -- Record start time
-    SET v_StartTime = NOW(3);
-    
-    -- Log procedure start
-    CALL LogSystemEvent('INFO', 'ORDER_PROCESSING', 
-        CONCAT('Starting order process for CustomerID: ', p_CustomerID, 
-               ', ProductID: ', p_ProductID, ', Quantity: ', p_Quantity),
-        'Orders', NULL, NULL
-        );
-        
-    -- Error handler for any SQL errors
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
+        -- Capture error information
+        GET DIAGNOSTICS CONDITION 1
+            v_ErrorCode = RETURNED_SQLSTATE,
+            v_ErrorMessage = MESSAGE_TEXT;
+        
         ROLLBACK;
-        SET p_Message = 'Error: Transaction failed and was rolled back.';
-        SET p_OrderID = NULL;
-    END;
         
         -- Calculate execution time
         SET v_EndTime = NOW(3);
@@ -229,8 +222,8 @@ proc: BEGIN
         
         -- Log error
         CALL LogSystemEvent('ERROR', 'ORDER_PROCESSING', 
-            'Transaction failed and was rolled back',
-            'Orders', NULL, SQLSTATE);
+            CONCAT('Error: Transaction failed and was rolled back.', v_ErrorMessage),
+            'Orders', NULL, v_ErrorCode);
             
         -- Log audit trail
         INSERT INTO OrderAuditLog (
@@ -239,14 +232,18 @@ proc: BEGIN
         )
         VALUES (
             NULL, p_CustomerID, p_ProductID, 'CREATE',
-            FALSE, 'SQL Exception occurred', v_ExecutionTimeMs
+            FALSE, v_ErrorMessage, v_ExecutionTimeMs
         );
         
-        SET p_Message = 'Error: Transaction failed and was rolled back.';
+        SET p_Message = CONCAT('Error: Transaction failed - ', v_ErrorMessage);
         SET p_OrderID = NULL;
     END;
     
         -- Guard: quantity must be positive
+            -- Record start time
+    SET v_StartTime = NOW(3);
+    
+    -- Log procedure start
     IF p_Quantity IS NULL OR p_Quantity <= 0 THEN
         CALL LogSystemEvent(
             'WARNING', 'ORDER_PROCESSING',
