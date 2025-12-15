@@ -163,9 +163,7 @@ INSERT INTO OrderItems (OrderID, ProductID, Quantity, PriceAtPurchase) VALUES
 -- Order 17 (Customer 1)
 (17, 15, 1, 299.99);
 
--- =====================================================
 -- VERIFICATION QUERIES
--- =====================================================
 SELECT 'Database schema created successfully!' AS Status;
 SELECT COUNT(*) AS CustomerCount FROM Customers;
 SELECT COUNT(*) AS ProductCount FROM Products;
