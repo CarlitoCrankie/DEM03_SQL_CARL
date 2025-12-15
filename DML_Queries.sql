@@ -5,12 +5,14 @@
 -- BUSINESS KPI #1. Total Revenue
 -- Calculating total Revenue from 'Shipped' or 'Delivered' orders
 
+-- Start StopWatch
+SET @start_time = NOW(3);
+
 SELECT
     SUM(TotalAmount) AS TotalRevenue,
     COUNT(OrderID) AS CompleteOrders
 FROM Orders
 WHERE OrderStatus IN ('Shipped', 'Delivered');
-
 
 -- BUSINESS KPI #1.1 Incomplete or Pending Orders
 SELECT 
@@ -19,9 +21,15 @@ SELECT
 FROM Orders 
 WHERE OrderStatus IN ('Pending')
 
+-- End StopWatch
+SET @end_time = NOW(3);
+SET @execution_time = TIMESTAMPDIFF(MICROSECOND, @start_time, @end_time) / 1000;
+
+-- Log query performance
+CALL LogQueryPerformance('TotalRevenue_KPI', @execution_time, 1, 'SELECT', TRUE, NULL);
+
 
 -- BUSINESS KPI #2. Top 10 Customers by Total Spending
-
 SELECT 
     c.CustomerID,
     c.FullName,
@@ -34,7 +42,6 @@ ORDER BY TotalAmountSpent DESC
 LIMIT 10;
 
 -- BUSINESS KPI #3. Best Selling Products ( Top 5 by Quantity)
-
 SELECT 
     p.ProductID,
     p.ProductName,
@@ -65,7 +72,6 @@ ORDER BY SalesMonth;
 
 
 -- ANALYTICAL QUERY #1: Sales Rank by Category (WINDOW FUNCTION)
-
 WITH ProductSales AS (
     SELECT
         p.ProductID,
@@ -98,7 +104,7 @@ FROM ProductSales
 ORDER BY Category, CategoryRank;
 
 
--- ANALYTICAL QUERY #2: Customer Order Frequency (WINDOW FUNCTION)
+-- ANALYTICAL QUERY #2: Customer Order Frequency
 
 SELECT
     c.CustomerID,
@@ -190,9 +196,6 @@ FROM Customers c
 LEFT JOIN Orders o ON c.CustomerID = o.CustomerID
 GROUP BY c.CustomerID, c.FullName, c.Email;
 
--- Test the view
-SELECT * FROM CustomerSalesSummary ORDER BY TotalAmountSpent DESC LIMIT 10;
-
 
 -- View 2: Product Inventory Status
 CREATE OR REPLACE VIEW ProductInventoryStatus AS 
@@ -215,10 +218,6 @@ LEFT JOIN OrderItems oi ON p.ProductID = oi.ProductID
 LEFT JOIN Orders o ON oi.OrderID = o.OrderID
     AND o.OrderStatus IN ('Shipped', 'Delivered')
 GROUP BY p.ProductID, p.ProductName, p.Category, p.Price, i.QuantityOnHand ;
-
--- Test the view
-SELECT * FROM ProductInventoryStatus WHERE StockStatus = 'Low Stock';
-
 
 -- STORED PROCEDURE: Process New Order
 
@@ -337,31 +336,7 @@ proc: BEGIN
 END //
 
 
--- TEST THE STORED PROCEDURE
-
--- Test 1: Successful order
-CALL ProcessNewOrder(1, 2, 5, @order_id, @message);
-SELECT @order_id AS OrderID, @message AS Message;
-
--- Verify the order was created
-SELECT * FROM Orders WHERE OrderID = @order_id;
-SELECT * FROM OrderItems WHERE OrderID = @order_id;
-
--- Check updated inventory
-SELECT * FROM Inventory WHERE ProductID = 2;
-
-
--- Test 2: Insufficient stock (should fail)
-CALL ProcessNewOrder(2, 1, 500, @order_id2, @message2);
-SELECT @order_id2 AS OrderID, @message2 AS Message;
-
-
--- Test 3: Invalid customer (should fail)
-CALL ProcessNewOrder(9999, 3, 1, @order_id3, @message3);
-SELECT @order_id3 AS OrderID, @message3 AS Message;
-
-
--- ADDITIONAL STORED PROCEDURE: Update Order Status
+-- Update Order Status
 
 DELIMITER //
 
@@ -373,13 +348,13 @@ CREATE PROCEDURE UpdateOrderStatus(
 proc: BEGIN
     DECLARE v_OrderExists INT DEFAULT 0;
     
-    -- Validate Allowed statuses to avoid bad inputs
+    -- Validate Allowed statuses
     IF p_NewStatus IS NULL OR p_NewStatus NOT IN ('Pending', 'Shipped', 'Delivered') THEN
         SET p_Message = CONCAT('Error: Invalid status value: ', COALESCE(p_NewStatus, 'NULL'), '.');
         LEAVE proc;
     END IF;
 
-    -- Check if order exists
+
     SELECT COUNT(*) INTO v_OrderExists
     FROM Orders
     WHERE OrderID = p_OrderID;
@@ -391,7 +366,7 @@ proc: BEGIN
 
     START TRANSACTION;
 
-    -- Update order status
+
     UPDATE Orders
     SET OrderStatus = p_NewStatus
     WHERE OrderID = p_OrderID;
@@ -400,11 +375,6 @@ proc: BEGIN
 
     SET p_Message = CONCAT('Success: Order ', p_OrderID, ' status updated to ', p_NewStatus);
 END//
-
-
--- Testing UpdateOrderStatus procedure
-CALL UpdateOrderStatus(@order_id, 'Shipped', @update_message);
-SELECT @update_message AS UpdateMessage;
 
 
 -- SUMMARY REPORT: Database Statistics

@@ -1,7 +1,6 @@
--- =============================
 -- SQL DDL SCRIPT: Invetory and Order Management System
 -- Database Schema Implementation
--- =============================
+
 
 -- Drop tables if they exist (for clean re-runs)
 DROP TABLE IF EXISTS OrderItems;
@@ -11,7 +10,7 @@ DROP TABLE IF EXISTS Products;
 DROP TABLE IF EXISTS Customers;
 
 
--- TABLE 1: CUSTOMERS
+-- CUSTOMERS
 CREATE TABLE Customers (
   CustomerID INT AUTO_INCREMENT PRIMARY KEY,
   FullName VARCHAR(100),
@@ -20,7 +19,7 @@ CREATE TABLE Customers (
   ShippingAddress VARCHAR(255)
 );
 
--- TABLE 2: PRODUCTS
+-- PRODUCTS
 CREATE TABLE Products (
     ProductID INT PRIMARY KEY AUTO_INCREMENT,
     ProductName VARCHAR(150) NOT NULL,
@@ -28,14 +27,14 @@ CREATE TABLE Products (
     Price DECIMAL(10, 2) NOT NULL CHECK (Price >= 0)
 );
 
--- TABLE 3: INVENTORY
+-- INVENTORY
 CREATE TABLE Inventory (
     ProductID INT PRIMARY KEY,
     QuantityOnHand INT NOT NULL DEFAULT 0 CHECK (QuantityOnHand >= 0),
     FOREIGN KEY (ProductID) REFERENCES Products(ProductID) ON DELETE CASCADE
 );
 
--- TABLE 4: ORDERS
+-- ORDERS
 CREATE TABLE Orders (
     OrderID INT PRIMARY KEY AUTO_INCREMENT,
     CustomerID INT NOT NULL,
@@ -46,7 +45,7 @@ CREATE TABLE Orders (
     FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID) ON DELETE CASCADE
 );
 
--- TABLE 5: ORDER ITEMS (Bridge Table)
+-- ORDER ITEMS (Bridge Table)
 CREATE TABLE OrderItems (
     OrderItemID INT PRIMARY KEY AUTO_INCREMENT,
     OrderID INT NOT NULL,
@@ -128,39 +127,22 @@ INSERT INTO Orders (CustomerID, OrderDate, TotalAmount, OrderStatus) VALUES
 
 -- Insert Order Items
 INSERT INTO OrderItems (OrderID, ProductID, Quantity, PriceAtPurchase) VALUES
--- Order 1 (Customer 1)
 (1, 1, 1, 1299.99), (1, 2, 1, 29.99), (1, 3, 1, 12.99),
--- Order 2 (Customer 2)
 (2, 6, 1, 89.99),
--- Order 3 (Customer 1)
 (3, 10, 1, 149.99),
--- Order 4 (Customer 3)
 (4, 7, 1, 45.00), (4, 8, 1, 52.00), (4, 9, 1, 38.00),
--- Order 5 (Customer 4)
 (5, 4, 3, 19.99), (5, 5, 2, 59.99),
--- Order 6 (Customer 5)
 (6, 2, 1, 29.99), (6, 11, 2, 24.99),
--- Order 7 (Customer 2)
 (7, 15, 1, 299.99), (7, 2, 1, 29.99),
--- Order 8 (Customer 6)
 (8, 12, 2, 49.99), (8, 13, 1, 129.99),
--- Order 9 (Customer 7)
 (9, 1, 1, 1299.99),
--- Order 10 (Customer 8)
 (10, 4, 2, 19.99), (10, 12, 1, 49.99), (10, 3, 3, 12.99),
--- Order 11 (Customer 3)
 (11, 15, 1, 299.99),
--- Order 12 (Customer 9)
 (12, 6, 1, 89.99),
--- Order 13 (Customer 10)
 (13, 10, 1, 149.99), (13, 2, 1, 29.99), (13, 11, 2, 24.99),
--- Order 14 (Customer 4)
 (14, 10, 1, 149.99),
--- Order 15 (Customer 11)
 (15, 13, 1, 129.99), (15, 12, 1, 49.99),
--- Order 16 (Customer 12)
 (16, 8, 1, 52.00),
--- Order 17 (Customer 1)
 (17, 15, 1, 299.99);
 
 -- VERIFICATION QUERIES
@@ -169,3 +151,7 @@ SELECT COUNT(*) AS CustomerCount FROM Customers;
 SELECT COUNT(*) AS ProductCount FROM Products;
 SELECT COUNT(*) AS OrderCount FROM Orders;
 SELECT COUNT(*) AS OrderItemCount FROM OrderItems;
+
+
+-- LOGGING ENABLED
+CALL LogSystemEvent('INFO', 'SCHEMA_CREATION', 'Database Schema and sample data created successfully', NULL, NULL, NULL);
