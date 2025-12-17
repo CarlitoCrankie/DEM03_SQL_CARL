@@ -32,38 +32,49 @@ CALL UpdateOrderStatus(@order_id, 'Shipped', @update_message);
 SELECT @update_message AS UpdateMessage;
 
 
+/*
+BASIC TESTS:
 
--- Log queries
--- Manual logging of system events:
-   CALL LogSystemEvent('INFO', 'CUSTOM_EVENT', 'Your message here', 'TableName', RecordID, NULL);
+1. Test logging:
+   CALL LogEvent('INFO', 'TEST', 'Hello logging!');
+   SELECT * FROM RecentLogs LIMIT 5;
 
--- Processing an order with full logging:
-   CALL ProcessNewOrderWithLogging(1, 5, 2, @order_id, @message);
-   SELECT @order_id, @message;
+2. Process successful order:
+   CALL ProcessOrderWithLog(1, 2, 2, @order, @msg);
+   SELECT @order, @msg;
+   SELECT * FROM OrderActivity LIMIT 5;
 
+3. Test insufficient stock:
+   CALL ProcessOrderWithLog(1, 1, 9999, @order, @msg);
+   SELECT @msg;
+   SELECT * FROM ErrorLog LIMIT 1;
 
--- View order processing performance:
-   SELECT * FROM OrderProcessingSummary;
+4. Test order cancellation:
+   CALL ProcessOrderWithLog(2, 3, 2, @order, @msg);
+   SELECT QuantityOnHand FROM Inventory WHERE ProductID = 3;
+   CALL CancelOrder(@order, 'Test cancellation', @cancel_msg);
+   SELECT QuantityOnHand FROM Inventory WHERE ProductID = 3;
 
--- View inventory changes:
-   SELECT * FROM InventoryChangeSummary;
+5. View all activity:
+   SELECT * FROM RecentLogs LIMIT 20;
+   SELECT * FROM DailySummary;
+*/
 
--- View system health:
-   SELECT * FROM SystemHealthLog WHERE LogDate >= DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+-- TEST NEW LOGGING-ENABLED PROCEDURES
 
--- Generate daily report:
-   CALL GenerateDailySummaryReport(CURDATE());
+-- Test 1: Process order with logging
+CALL ProcessOrderWithLog(1, 2, 3, @order_id, @message);
+SELECT @order_id AS OrderID, @message AS StatusMessage;
 
--- Archive old logs (keep last 90 days):
-   CALL ArchiveOldLogs(90);
+-- Test 2: View the logs
+SELECT * FROM RecentLogs LIMIT 10;
 
--- Query specific error types:
-   SELECT * FROM SystemLog 
-   WHERE LogCategory = 'ORDER_PROCESSING' 
-   AND LogLevel = 'ERROR' 
-   ORDER BY LogTimestamp DESC;
+-- Test 3: View order activity
+SELECT * FROM OrderActivity LIMIT 5;
 
--- Monitor slow queries:
-    SELECT * FROM QueryPerformanceLog 
-    WHERE ExecutionTimeMs > 1000 
-    ORDER BY ExecutionTimeMs DESC;
+-- Test 4: Cancel an order
+CALL CancelOrder(@order_id, 'Testing cancellation', @cancel_msg);
+SELECT @cancel_msg AS CancellationResult;
+
+-- Test 5: Verify inventory restored
+SELECT * FROM InventoryActivity WHERE OrderID = @order_id;

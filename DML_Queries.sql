@@ -406,3 +406,23 @@ SELECT
     AVG(TotalAmount) AS Value
 FROM Orders
 WHERE OrderStatus IN ('Shipped', 'Delivered');
+
+
+-- TEST NEW LOGGING-ENABLED PROCEDURES
+
+-- Test 1: Process order with logging
+CALL ProcessOrderWithLog(1, 2, 3, @order_id, @message);
+SELECT @order_id AS OrderID, @message AS StatusMessage;
+
+-- Test 2: View the logs
+SELECT * FROM RecentLogs LIMIT 10;
+
+-- Test 3: View order activity
+SELECT * FROM OrderActivity LIMIT 5;
+
+-- Test 4: Cancel an order
+CALL CancelOrder(@order_id, 'Testing cancellation', @cancel_msg);
+SELECT @cancel_msg AS CancellationResult;
+
+-- Test 5: Verify inventory restored
+SELECT * FROM InventoryActivity WHERE OrderID = @order_id;
