@@ -64,15 +64,11 @@ Comprehensive logging infrastructure for error tracking, audit trails, and debug
 - SystemLog: Primary log table for all system events, errors, and warnings
 - OrderAuditLog: Complete audit trail for order processing transactions
 - InventoryChangeLog: Tracks all inventory modifications with change history
-- QueryPerformanceLog: Monitors database query execution performance
-- UserActivityLog: Records user interactions and system access
 
 **Logging Procedures:**
 - LogSystemEvent: General-purpose event logging
-- LogInventoryChange: Specialized inventory change tracking
-- LogQueryPerformance: Query execution metrics collection
+- LogInventoryChange: Specialized inventory change tracking 
 - ProcessNewOrderWithLogging: Enhanced order processing with full logging
-- ArchiveOldLogs: Maintenance procedure for log cleanup
 - GenerateDailySummaryReport: Daily system activity reporting
 
 **Automatic Triggers:**
@@ -311,7 +307,6 @@ Table OrderItems {
 The logging system provides:
 - **Error Tracking**: Captures all errors with detailed context
 - **Audit Trail**: Complete history of data changes
-- **Performance Monitoring**: Query execution time tracking
 - **Debugging Support**: Detailed information for troubleshooting
 - **Compliance**: Support for SOX, GDPR, PCI-DSS requirements
 
