@@ -22,7 +22,7 @@ SELECT @order_id3 AS OrderID, @message3 AS Message;
 
 
 -- Test the view
-SELECT * FROM ProductInventoryStatus WHERE StockStatus = 'Low Stock';
+SELECT * FROM productinventorystatus WHERE StockStatus = 'Low Stock'
 
 -- Test the view
 SELECT * FROM CustomerSalesSummary ORDER BY TotalAmountSpent DESC LIMIT 10;
@@ -32,33 +32,29 @@ CALL UpdateOrderStatus(@order_id, 'Shipped', @update_message);
 SELECT @update_message AS UpdateMessage;
 
 
-/*
-BASIC TESTS:
-
-1. Test logging:
+-- 1. Test logging:
    CALL LogEvent('INFO', 'TEST', 'Hello logging!');
    SELECT * FROM RecentLogs LIMIT 5;
 
-2. Process successful order:
+-- 2. Process successful order:
    CALL ProcessOrderWithLog(1, 2, 2, @order, @msg);
    SELECT @order, @msg;
    SELECT * FROM OrderActivity LIMIT 5;
 
-3. Test insufficient stock:
+-- 3. Test insufficient stock:
    CALL ProcessOrderWithLog(1, 1, 9999, @order, @msg);
    SELECT @msg;
    SELECT * FROM ErrorLog LIMIT 1;
 
-4. Test order cancellation:
+-- 4. Test order cancellation:
    CALL ProcessOrderWithLog(2, 3, 2, @order, @msg);
    SELECT QuantityOnHand FROM Inventory WHERE ProductID = 3;
    CALL CancelOrder(@order, 'Test cancellation', @cancel_msg);
    SELECT QuantityOnHand FROM Inventory WHERE ProductID = 3;
 
-5. View all activity:
+-- 5. View all activity:
    SELECT * FROM RecentLogs LIMIT 20;
    SELECT * FROM DailySummary;
-*/
 
 -- TEST NEW LOGGING-ENABLED PROCEDURES
 
