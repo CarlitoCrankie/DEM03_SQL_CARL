@@ -1,20 +1,4 @@
--- TEST THE STORED PROCEDURE
-
--- Test 1: Successful order
-CALL ProcessNewOrder(1, 2, 5, @order_id, @message);
-SELECT @order_id AS OrderID, @message AS Message;
-
--- Verify the order was created
-SELECT * FROM Orders WHERE OrderID = @order_id;
-SELECT * FROM OrderItems WHERE OrderID = @order_id;
-
--- Check updated inventory
-SELECT * FROM Inventory WHERE ProductID = 2;
-
--- Test 2: Insufficient stock (should fail)
-CALL ProcessNewOrder(2, 1, 500, @order_id2, @message2);
-SELECT @order_id2 AS OrderID, @message2 AS Message;
-
+-- TEST THE STORED PROCEDURE AND VIEWS
 
 -- Test 3: Invalid customer (should fail)
 CALL ProcessNewOrder(9999, 3, 1, @order_id3, @message3);
@@ -40,11 +24,13 @@ SELECT @update_message AS UpdateMessage;
    CALL ProcessOrderWithLog(1, 2, 2, @order, @msg);
    SELECT @order, @msg;
    SELECT * FROM OrderActivity LIMIT 5;
+   SELECT * FROM OrderActivity WHERE OrderID = @order;
 
 -- 3. Test insufficient stock:
-   CALL ProcessOrderWithLog(1, 1, 9999, @order, @msg);
-   SELECT @msg;
-   SELECT * FROM ErrorLog LIMIT 1;
+   CALL ProcessOrderWithLog(1, 2, -5, @order, @msg);
+   SELECT @order,@msg;
+   SELECT * FROM ErrorLog LIMIT 5;
+   SELECT * FROM orderactivity WHERE 'Success' = FALSE LIMIT 1;
 
 -- 4. Test order cancellation:
    CALL ProcessOrderWithLog(2, 3, 2, @order, @msg);

@@ -1,3 +1,4 @@
+Use inventory_system;
 -- Drop existing logging tables if they exist
 DROP TABLE IF EXISTS OrderAuditLog;
 DROP TABLE IF EXISTS InventoryChangeLog;
@@ -54,6 +55,7 @@ CREATE TABLE InventoryChangeLog (
 DELIMITER //
 
 -- system log procedure
+DROP PROCEDURE IF EXISTS LogEvent;
 CREATE PROCEDURE LogEvent(
     IN p_Level VARCHAR(20),
     IN p_Category VARCHAR(50),
@@ -65,6 +67,7 @@ BEGIN
 END//
 
 -- inventory change log
+DROP PROCEDURE IF EXISTS LogInventory;
 CREATE PROCEDURE LogInventory(
     IN p_ProductID INT,
     IN p_Type VARCHAR(20),
@@ -119,11 +122,11 @@ proc_main: BEGIN
         IF v_AttemptStarted THEN
             SET v_RetryCount = v_RetryCount + 1;
             
+            ROLLBACK;
             -- Log retry attempt
             INSERT INTO SystemLog (LogLevel, Category, Message)
             VALUES ('WARNING', 'ORDER', CONCAT('Retry ', v_RetryCount, ' after lock issue: ', v_ErrorMsg));
             
-            ROLLBACK;
             SET v_AttemptStarted = FALSE;
         END IF;
     END;
@@ -161,23 +164,23 @@ proc_main: BEGIN
         
         -- Validate quantity
         IF p_Quantity IS NULL OR p_Quantity <= 0 THEN
-            CALL LogEvent('WARNING', 'ORDER', 'Invalid quantity');
             INSERT INTO OrderAuditLog (OrderID, CustomerID, ProductID, Action, Success, ErrorMsg)
             VALUES (NULL, p_CustomerID, p_ProductID, 'CREATE', FALSE, 'Invalid quantity');
             SET p_Message = 'Error: Invalid quantity';
             SET p_OrderID = NULL;
             ROLLBACK;
+            CALL LogEvent('ERROR', 'ORDER', CONCAT('Invalid quantity: ', COALESCE(p_Quantity, 0)));
             LEAVE proc_main;
         END IF;
         
         -- Check customer exists
         IF NOT EXISTS (SELECT 1 FROM Customers WHERE CustomerID = p_CustomerID) THEN
-            CALL LogEvent('WARNING', 'ORDER', CONCAT('Customer ', p_CustomerID, ' not found'));
             INSERT INTO OrderAuditLog (OrderID, CustomerID, ProductID, Action, Success, ErrorMsg)
             VALUES (NULL, p_CustomerID, p_ProductID, 'CREATE', FALSE, 'Customer not found');
             SET p_Message = 'Error: Customer not found';
             SET p_OrderID = NULL;
             ROLLBACK;
+            CALL LogEvent('ERROR', 'ORDER', CONCAT('Customer ', p_CustomerID, ' not found'));
             LEAVE proc_main;
         END IF;
         
@@ -188,12 +191,12 @@ proc_main: BEGIN
         FOR UPDATE;
         
         IF v_Price IS NULL THEN
-            CALL LogEvent('WARNING', 'ORDER', CONCAT('Product ', p_ProductID, ' not found'));
             INSERT INTO OrderAuditLog (OrderID, CustomerID, ProductID, Action, Success, ErrorMsg)
             VALUES (NULL, p_CustomerID, p_ProductID, 'CREATE', FALSE, 'Product not found');
             SET p_Message = 'Error: Product not found';
             SET p_OrderID = NULL;
             ROLLBACK;
+            CALL LogEvent('ERROR', 'ORDER', CONCAT('Customer ', p_CustomerID, ' not found'));
             LEAVE proc_main;
         END IF;
         
@@ -206,22 +209,22 @@ proc_main: BEGIN
         SET v_StockBeforeUpdate = v_Stock;
         
         IF v_Stock IS NULL THEN
-            CALL LogEvent('WARNING', 'ORDER', CONCAT('No inventory for product ', p_ProductID));
             INSERT INTO OrderAuditLog (OrderID, CustomerID, ProductID, Action, Success, ErrorMsg)
             VALUES (NULL, p_CustomerID, p_ProductID, 'CREATE', FALSE, 'No inventory record');
             SET p_Message = 'Error: No inventory record';
             SET p_OrderID = NULL;
             ROLLBACK;
+            CALL LogEvent('ERROR', 'ORDER', CONCAT('No inventory for product ', p_ProductID));
             LEAVE proc_main;
         END IF;
         
         IF v_Stock < p_Quantity THEN
-            CALL LogEvent('WARNING', 'ORDER', CONCAT('Insufficient stock: need ', p_Quantity, ', have ', v_Stock));
             INSERT INTO OrderAuditLog (OrderID, CustomerID, ProductID, Action, Success, ErrorMsg)
             VALUES (NULL, p_CustomerID, p_ProductID, 'CREATE', FALSE, CONCAT('Insufficient stock: ', v_Stock, ' available'));
             SET p_Message = CONCAT('Error: Only ', v_Stock, ' units available');
             SET p_OrderID = NULL;
             ROLLBACK;
+            CALL LogEvent('ERROR', 'ORDER', CONCAT('Insufficient stock: need ', p_Quantity, ', have ', v_Stock));
             LEAVE proc_main;
         END IF;
         
@@ -246,12 +249,12 @@ proc_main: BEGIN
         SELECT QuantityOnHand INTO v_Stock FROM Inventory WHERE ProductID = p_ProductID;
         
         IF v_Stock != (v_StockBeforeUpdate - p_Quantity) THEN
-            CALL LogEvent('ERROR', 'ORDER', 'Inventory update verification failed');
             INSERT INTO OrderAuditLog (OrderID, CustomerID, ProductID, Action, Success, ErrorMsg)
             VALUES (p_OrderID, p_CustomerID, p_ProductID, 'CREATE', FALSE, 'Inventory verification failed');
             SET p_Message = 'Error: Inventory update failed verification';
             SET p_OrderID = NULL;
             ROLLBACK;
+            CALL LogEvent('ERROR', 'ORDER', 'Inventory update verification failed');
             LEAVE proc_main;
         END IF;
         
@@ -293,7 +296,6 @@ proc_main: BEGIN
 END//
 
 DELIMITER ;
-
 
 
 -- ORDER 
@@ -353,24 +355,24 @@ proc_cancel: BEGIN
     FOR UPDATE;
     
     IF v_OrderStatus IS NULL THEN
-        CALL LogEvent('WARNING', 'ORDER', CONCAT('Order ', p_OrderID, ' not found'));
         SET p_Message = 'Error: Order not found';
         ROLLBACK;
+        CALL LogEvent('ERROR', 'ORDER', CONCAT('Order ', p_OrderID, ' not found'));
         LEAVE proc_cancel;
     END IF;
     
     -- Check if order can be cancelled
     IF v_OrderStatus = 'Delivered' THEN
-        CALL LogEvent('WARNING', 'ORDER', CONCAT('Cannot cancel delivered Order ', p_OrderID));
         SET p_Message = 'Error: Cannot cancel delivered order';
         ROLLBACK;
+        CALL LogEvent('ERROR', 'ORDER', CONCAT('Cannot cancel delivered Order ', p_OrderID));
         LEAVE proc_cancel;
     END IF;
     
     IF v_OrderStatus = 'Cancelled' THEN
-        CALL LogEvent('WARNING', 'ORDER', CONCAT('Order ', p_OrderID, ' already cancelled'));
         SET p_Message = 'Warning: Order already cancelled';
         ROLLBACK;
+        CALL LogEvent('WARNING', 'ORDER', CONCAT('Order ', p_OrderID, ' already cancelled'));
         LEAVE proc_cancel;
     END IF;
     
@@ -529,7 +531,7 @@ SELECT
     i.ChangeType,
     i.OldQty,
     i.NewQty,
-    (i.NewQty - i.OldQty) AS Change,
+    (i.NewQty - i.OldQty) AS Change_left,
     i.OrderID,
     i.Reason
 FROM InventoryChangeLog i
