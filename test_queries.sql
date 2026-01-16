@@ -60,3 +60,12 @@ SELECT @cancel_msg AS CancellationResult;
 
 -- Test 5: Verify inventory restored
 SELECT * FROM InventoryActivity WHERE OrderID = @order_id;
+
+CALL ProcessOrderWithLog(1, 2, 5, @oid, @msg);
+SELECT * FROM OrderActivity WHERE OrderID = 32;
+SELECT * FROM InventoryActivity WHERE OrderID = 32;
+CALL UpdateOrderStatus(32, 'Shipped', @msg);
+CALL CancelOrder(32, 'Customer request', @msg);
+SELECT * FROM RecentLogs;
+
+SELECT * FROM SystemLog WHERE LogLevel = 'ERROR';

@@ -154,4 +154,4 @@ SELECT COUNT(*) AS OrderItemCount FROM OrderItems;
 
 
 -- LOGGING ENABLED
-CALL LogSystemEvent('INFO', 'SCHEMA_CREATION', 'Database Schema and sample data created successfully', NULL, NULL, NULL);
+CALL LogEvent('INFO', 'SCHEMA_CREATION', 'Database Schema and sample data created successfully', NULL, NULL, NULL);

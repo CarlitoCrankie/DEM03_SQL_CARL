@@ -66,8 +66,8 @@ Comprehensive logging infrastructure for error tracking, audit trails, and debug
 - InventoryChangeLog: Tracks all inventory modifications with change history
 
 **Logging Procedures:**
-- LogSystemEvent: General-purpose event logging
-- LogInventoryChange: Specialized inventory change tracking 
+- LogEvent: General-purpose event logging
+- LogInventory: Specialized inventory change tracking 
 - ProcessNewOrderWithLogging: Enhanced order processing with full logging
 - GenerateDailySummaryReport: Daily system activity reporting
 

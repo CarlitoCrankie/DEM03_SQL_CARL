@@ -19,15 +19,7 @@ SELECT
     SUM(TotalAmount) AS TotalAmountUnspent,
     COUNT(OrderID) AS NumberOfOrders
 FROM Orders 
-WHERE OrderStatus IN ('Pending')
-
--- -- End StopWatch
--- SET @end_time = NOW(3);
--- SET @execution_time = TIMESTAMPDIFF(MICROSECOND, @start_time, @end_time) / 1000;
-
--- -- Log query performance
--- CALL LogQueryPerformance('TotalRevenue_KPI', @execution_time, 1, 'SELECT', TRUE, NULL);
-
+WHERE OrderStatus IN ('Pending');
 
 -- BUSINESS KPI #2. Top 10 Customers by Total Spending
 SELECT 
@@ -47,7 +39,7 @@ SELECT
     p.ProductName,
     p.Category,
     SUM(oi.Quantity) AS TotalQuantitySold,
-    SUM(oi.Quantity * o.PriceAtPurchase) AS TotalRevenue
+    SUM(oi.Quantity * oi.PriceAtPurchase) AS TotalRevenue
 FROM Products p
 INNER JOIN OrderItems oi on p.ProductID = oi.ProductID
 INNER JOIN Orders o ON oi.OrderID = o.OrderID
@@ -222,7 +214,7 @@ GROUP BY p.ProductID, p.ProductName, p.Category, p.Price, i.QuantityOnHand ;
 -- STORED PROCEDURE: Process New Order
 
 DELIMITER //
-
+DROP PROCEDURE IF EXISTS ProcessNewOrder //
 CREATE PROCEDURE ProcessNewOrder(
     IN p_CustomerID INT,
     IN p_ProductID INT,
@@ -339,7 +331,7 @@ END //
 -- Update Order Status
 
 DELIMITER //
-
+DROP PROCEDURE IF EXISTS UpdateOrderStatus //
 CREATE PROCEDURE UpdateOrderStatus(
     IN p_OrderID INT,
     IN p_NewStatus VARCHAR(20),
